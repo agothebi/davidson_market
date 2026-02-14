@@ -1,7 +1,17 @@
 "use client";
 
-import { ClockIcon, TagIcon } from "@heroicons/react/24/outline";
-import { formatDistanceToNow } from "date-fns"; // You might need to install date-fns: npm install date-fns
+import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import {
+  TicketIcon, // Tickets
+  BookOpenIcon, // Books & Notes
+  CpuChipIcon, // Electronics
+  ShoppingBagIcon, // Clothing
+  HomeIcon, // Furniture – closest literal representation
+  WrenchScrewdriverIcon, // Services – represents work/service
+  TagIcon,
+} from "@heroicons/react/24/outline";
+import { Table2Icon } from "lucide-react";
 
 export interface Item {
   id: string;
@@ -26,54 +36,119 @@ interface ItemCardProps {
   onClick: () => void;
 }
 
+// Helper: Get Icon based on category, but FORCE the specific gray colors
+const getPlaceholderAssets = (category: string) => {
+  // 1. Define the specific gray colors you requested
+  // #e2e8f0 = bg-slate-200
+  // #475569 = text-slate-600
+  const style = { bg: "bg-slate-200", color: "text-slate-600" };
+
+  // 2. Select the icon
+  let Icon;
+  switch (category) {
+    case "Tickets":
+      Icon = TicketIcon;
+      break;
+
+    case "Books & Notes":
+      Icon = BookOpenIcon;
+      break;
+
+    case "Electronics":
+      Icon = CpuChipIcon;
+      break;
+
+    case "Clothing":
+      Icon = ShoppingBagIcon;
+      break;
+
+    case "Furniture":
+      Icon = HomeIcon; // visually represents furniture
+      break;
+
+    case "Services":
+      Icon = WrenchScrewdriverIcon; // conveys “service/work”
+      break;
+
+    default:
+      Icon = TagIcon;
+      break;
+  }
+
+  return { ...style, icon: Icon };
+};
+
 export default function ItemCard({ item, onClick }: ItemCardProps) {
+  const [imageError, setImageError] = useState(false);
+
   const timeAgo = formatDistanceToNow(new Date(item.created_at), {
     addSuffix: true,
   });
 
+  // LOGIC: Valid image check
+  const rawImage =
+    item.images && item.images.length > 0 ? item.images[0] : null;
+  const hasValidImage = rawImage && rawImage.trim() !== "" && !imageError;
+
+  const placeholder = getPlaceholderAssets(item.category);
+  const Icon = placeholder.icon;
+
   return (
     <div
       onClick={onClick}
-      className="group relative aspect-[4/5] w-full cursor-pointer overflow-hidden rounded-3xl bg-gray-100 shadow-sm transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-[1.02]"
+      className="group cursor-pointer flex flex-row md:flex-col w-full bg-white rounded-2xl border border-white/60 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-gray-300"
     >
-      {/* 1. Main Image */}
-      <img
-        src={item.images[0] || "/placeholder.png"}
-        alt={item.title}
-        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-      />
+      {/* 1. IMAGE CONTAINER */}
+      <div
+        className={`relative w-32 h-32 md:w-full md:h-auto md:aspect-square shrink-0 ${hasValidImage ? "bg-gray-100" : placeholder.bg}`}
+      >
+        {hasValidImage ? (
+          <img
+            src={rawImage}
+            alt={item.title}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          // ELEGANT GRAY PLACEHOLDER
+          // Uses the exact slate colors to match your reference
+          <div className="flex flex-col items-center justify-center h-full w-full gap-2 p-4">
+            <Icon
+              className={`w-14 h-14 md:w-17 md:h-17 ${placeholder.color} opacity-50`}
+            />
+          </div>
+        )}
 
-      {/* 2. Status Badge (If Sold) */}
-      {item.status === "Sold" && (
-        <div className="absolute top-4 right-4 z-10 rounded-full bg-black/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-md">
-          SOLD
-        </div>
-      )}
-
-      {/* 3. Glass Overlay Information */}
-      <div className="absolute bottom-0 left-0 right-0 p-4">
-        <div className="rounded-2xl bg-white/70 backdrop-blur-md p-4 border border-white/50 shadow-lg">
-          {/* Top Row: Title & Price */}
-          <div className="flex justify-between items-start gap-2">
-            <h3 className="font-bold text-gray-900 line-clamp-1 text-base">
-              {item.title}
-            </h3>
-            <span className="shrink-0 rounded-full bg-[#D42121]/10 px-2 py-1 text-xs font-extrabold text-[#D42121]">
-              ${item.price}
+        {/* SOLD OVERLAY */}
+        {item.status === "Sold" && (
+          <div className="absolute inset-0 bg-white/60 flex items-center justify-center backdrop-blur-[2px] z-10">
+            <span className="text-black font-bold tracking-wider text-[10px] border border-black px-2 py-0.5 uppercase">
+              Sold
             </span>
           </div>
+        )}
+      </div>
 
-          {/* Bottom Row: Metadata */}
-          <div className="mt-2 flex items-center justify-between text-xs text-gray-600 font-medium">
-            <div className="flex items-center gap-1">
-              <TagIcon className="w-3.5 h-3.5" />
-              <span>{item.condition}</span>
-            </div>
-            <div className="flex items-center gap-1 opacity-70">
-              <ClockIcon className="w-3.5 h-3.5" />
-              <span>{timeAgo.replace("about ", "")}</span>
-            </div>
-          </div>
+      {/* 2. TEXT CONTAINER */}
+      <div className="flex flex-col justify-center gap-1 p-3 md:p-4 min-w-0 flex-1">
+        {/* Top Row: Title & Price */}
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1">
+          <h3 className="text-sm md:text-[15px] font-bold text-gray-900 line-clamp-2 md:truncate leading-tight">
+            {item.title}
+          </h3>
+          <span className="text-sm md:text-[15px] font-bold text-[#D42121] whitespace-nowrap">
+            ${item.price}
+          </span>
+        </div>
+
+        {/* Bottom Row: Metadata */}
+        <div className="flex items-center gap-2 text-xs text-gray-500 mt-1 md:mt-auto">
+          <span className="bg-gray-100 px-2 py-0.5 rounded-md font-medium text-[10px] uppercase tracking-wide">
+            {item.condition}
+          </span>
+          <span className="text-[10px] opacity-70">
+            {timeAgo.replace("about ", "")}
+          </span>
         </div>
       </div>
     </div>
